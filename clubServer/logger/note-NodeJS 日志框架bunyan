@@ -1,0 +1,95 @@
+Bunyan
+Bunyan(by Trent Mick)是另外一个值得考虑的日志框架，
+以略微不同的方式处理结构化，机器可读性被重点对待。
+
+其结果是，bunyan每行日志记录实际上就是JSON.stringify的一个输出。
+
+安装（Installation）
+npm install bunyan
+使用（Usage）
+var bunyan= require('bunyan');
+var log=bunyan.createLogger({name:'myapp'});
+log.info('hi');
+log.warn({lang:'fr'}, 'au revoir');
+输出：
+{"name":"myapp","hostname":"pwony-2","pid":12616,"level":30,"msg":"hi","time":"2014-05-26T17:58:32.835Z","v":0}
+{"name":"myapp","hostname":"pwony-2","pid":12616,"level":40,"lang":"fr","msg":"au revoir","time":"2014-05-26T17:58:32.837Z","v":0}
+你可以看到Bunyan缺省情况下的日志输出对人而言可读性不好，
+但是更加符合现代计算机的数据处理格式，
+在输出到其他储存时无需额外的格式化。
+不过我们人类，这种格式的信息还是不方便阅读，
+有一个bunyan命令行工具以标准命令行输入方式处理JSON数据。下面是一个输出经过bunyan管道处理后的例子：
+node example.js |bunyan
+产生以下输出：
+[2014-05-26T18:03:40.820Z]  INFO:myapp/13372 on pwony-2: hi
+[2014-05-26T18:03:40.824Z]  WARN: myapp/13372on pwony-2:au revoir(lang=fr)
+这样做的主要好处是不需要对开发环境进行重新配置，只要把输出传递给bunyan管道处理即可。
+JSON
+Bunyan和Winston之间一个关键的区别是Bunyan能够处理复杂的上下文环境和对象。再看上面的例子：
+log.warn({lang: 'fr'},'au revoir');
+{"name":"myapp","hostname":"pwony-2","pid":12616,"level":40,"lang":"fr","msg":"au revoir","time":"2014-05-26T17:58:32.837Z","v":0}
+你可以看到bunyan把语言参数合并进了日志结果。再看看下面这个：
+log.info(user, 'registered');
+log.info({user:user},'registered');
+Which produces:
+{"name":"myapp","hostname":"pwony-2","pid":14837,"level":30,"username":"alex","email":"...@gmail.com","msg":"registered","time":"2014-05-26T18:27:43.530Z","v":0}
+{"name":"myapp","hostname":"pwony-2","pid":14912,"level":30,"user":{"username":"alex","email":"...@gmail.com"},"msg":"registered","time":"2014-05-26T18:28:19.874Z","v":0}
+通过punyan管道处理后：
+[2014-05-26T18:28:42.455Z]  INFO: myapp/14943 on pwony-2: registered (username=alex,email=...@gmail.com)
+[2014-05-26T18:28:42.457Z]  INFO: myapp/14943on pwony-2:registered
+user:{
+"username": "alex",
+"email":"...@gmail.com"
+}
+当我们使用子日志（Child Loggers）时，这种处理方式的美妙之处将表露无遗。
+子日志（Child Loggers）
+Bunyan有一个子日志的概念，这允许为你的应用程序的某个子组件指定日志实例。也即是，创建一个新的日志实例使得可以处理额外的字段。
+子日志通过log.child(...)方法创建。这为记录系统、请求以及简单函数这些不同作用域的组件日志带来极大的方便。
+假设你想把请求ID记入该请求范围内的所有日志中，这样你可以把这些日志关联绑定在一起。
+varbunyan= require('bunyan');
+var log = bunyan.createLogger({name:'myapp'});
+
+app.use(function(req, res,next) {
+req.log=log.child({reqId: uuid()});
+next();
+});
+
+app.get('/', function(req, res) {
+req.log.info({user:...});
+});
+req.log日志实例将总是把它的上下文传递给log.child()函数并和所有后续调用合并，输出如下:
+{"name":"myapp","hostname":"pwony-2","pid":14837,"level":30,"reqId":"XXXX-XX-XXXX","user":"...@gmail.com","time":"2014-05-26T18:27:43.530Z","v":0}
+序列化器（Serializers）
+Bunyan在格式化整个对象时有两个问题:
+1循环引用（Circular references）。Winston在这里更聪明些，会检测发生的循环情况。
+2多余的数据（Unwanted noises）. 我觉得在Bunyan中对象是第一位的，所以很容易形成习惯把对象直接dump到日志中。
+为了处理这两个问题，Bunyan有一个序列化器的概念，基本上就是一些转换函数，把对象转换为部分字段的输出格式:
+function reqSerializer(req) {
+return{
+method:req.method,
+url: req.url,
+headers: req.headers
+}
+}
+
+var log = bunyan.createLogger({name:'myapp',serializers:{req: reqSerializer}});
+log.info({req:req});
+这样就只记录我们感兴趣的请求的方法、url和头部字段。
+流（Streams）
+Bunyan流的概念和Winston中的传输（transporters）概念一样 – 发送您的日志到一些地方用来显示和存储。
+Bunyan使用具有一些额外属性的可写流接口。
+一个Bunyan日志记录器实例拥有1个或多个指定流选项的流：
+var log=bunyan.createLogger({
+name: "foo",
+streams:[
+{
+stream: process.stderr,
+level: "debug"
+},
+...
+]
+});
+
+如何选择
+Winston和Bunyan都是很成熟的两个框架，Winston有一个强大的社区支持，而Bunyan使得日志的进一步系统分析处理非常方便。
+两个系统如何选择的关键因素是“能否和你的应用系统方便的集成”。

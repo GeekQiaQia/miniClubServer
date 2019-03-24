@@ -1,0 +1,16 @@
+https://www.npmjs.com/package/koa2-generator
+
+npm install -g koa-generator （全局安装） koa  programName
+
+npm install -g koa2-generator  koa2  programName
+
+koa clubServer
+
+npm install
+
+npm start
+
+https://mozilla.github.io/nunjucks/cn/templating.html
+
+
+
