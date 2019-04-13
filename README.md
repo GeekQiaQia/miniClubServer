@@ -3,7 +3,7 @@
 
         > 本项目主要分为两部分，分别为service和小程序端
 
-            1. service service模块，负责提供socketio服务和http服务，主要使用Nodejs Express4 Socket.IO
+            1. service service模块，负责提供socketio服务和http服务，主要使用Nodejs koa2 
             开发，后台数据支持为MongoDB
 
             2.小程序 WEBUI模块，主要前端展示模块，主要是用wx开发，并辅助以Axios
